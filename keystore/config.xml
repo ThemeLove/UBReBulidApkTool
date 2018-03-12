@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<keystore name="ubsdk" password="ubsdk_ubsdk">
+<alias name="ubsdk.keystore" password="ubsdk_ubsdk"/>
+</keystore>
