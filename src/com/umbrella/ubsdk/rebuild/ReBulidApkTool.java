@@ -281,10 +281,10 @@ public class ReBulidApkTool {
 		String keystoreConfigPath=BASE_PATH+File.separator+"keystore"+File.separator+"config.xml";
 		Keystore keystore = KeystoreXMLParser.parser(keystoreConfigPath);
 		
-		String jarSignerPath=TOOLS_PATH+File.separator+"jarsigner"+File.separator+"jarsigner";
+//		String jarSignerPath=TOOLS_PATH+File.separator+"jarsigner"+File.separator+"jarsigner";
 		String generateSignedApkCommand = String.format(
-		            "%s -digestalg SHA1 -sigalg SHA1withRSA -keystore %s -storepass %s -keypass %s -signedjar %s %s %s",
-		            new String[] {jarSignerPath,keystorePath, keystore.getPasword(), keystore.getAliasPwd(), signedApkPath,
+		            "jarsigner -digestalg SHA1 -sigalg SHA1withRSA -keystore %s -storepass %s -keypass %s -signedjar %s %s %s",
+		            new String[] {keystorePath, keystore.getPasword(), keystore.getAliasPwd(), signedApkPath,
 		            		unSignApkPath, keystore.getAlias()});
 		System.out.println("generateSignedApkCommand:"+generateSignedApkCommand);
 		CommandUtil.exeCmd(generateSignedApkCommand, new File(TOOLS_PATH));
@@ -326,7 +326,7 @@ public class ReBulidApkTool {
 		System.out.println("generateFinalChannelApkCommand:"+generateFinalChannelApkCommand);
 		CommandUtil.exeCmd(generateFinalChannelApkCommand,new File(TOOLS_PATH));
 		FileUtil.delete(signedApkPath);
-		FileUtil.delete(WORK_PATH);
+//		FileUtil.delete(WORK_PATH);
 		if (!finalChannelApk.exists()) {
 			throw new RuntimeException("error----->Optimize signature apk fail!!");
 		}else{
