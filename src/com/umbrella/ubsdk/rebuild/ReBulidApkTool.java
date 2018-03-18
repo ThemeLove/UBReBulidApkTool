@@ -32,6 +32,7 @@ public class ReBulidApkTool {
 	private static String unSignApkPath;
 	private static String signedApkPath;
 	private static File originApkFile;
+	private static File tempApkFile;
 	
 
 	public static void main(String[] args) throws Exception {
@@ -43,21 +44,24 @@ public class ReBulidApkTool {
 		initPath();
 //		2.获取母包apk
 		getOriginApk(args);
-//		3.反编译到bak目录
+//		3.拷贝母包到work/tempApk.apk并且重命名
+		copyOriginApk2WorkAndRename();
+//		4.反编译到bak目录
 		decodeApk2Bak( );
-//		4.拷贝到temp目录
+//		5.拷贝到temp目录
 		copyBak2Temp();
-//		5.修改AndroidManifest.xml文件
+//		6.修改AndroidManifest.xml文件
 		modifyTheManifest();
-//		6.生成未签名的apk
+//		7.生成未签名的apk
 		generateUnsignedApk();
-//		7.生成签名apk
+//		8.生成签名apk
 		generateSignedApk();
-//		8.对签名apk进行优化
+//		9.对签名apk进行优化
 		zipalignSignedApk();
 		
 		System.out.println("ReBulidApk Success!!");
 	}
+
 
 	/**
 	 * 初始化路径
@@ -77,6 +81,10 @@ public class ReBulidApkTool {
 		
 		unSignApkPath = BASE_PATH+File.separator+"unSignApk.apk";
 		signedApkPath =BASE_PATH+File.separator+"signedApk.apk";
+		
+//		清空work目录
+		FileUtil.delete(WORK_PATH);
+		
 		System.out.println("Step one:Initialization path success!!");
 		System.out.println("----------------------------");
 		System.out.println(LINE_SEPARATOR);
@@ -121,6 +129,29 @@ public class ReBulidApkTool {
 		}
 		
 	}
+	
+
+	/**
+	 * 拷贝母包到work目录并且重命名为tempApk.apk
+	 * @throws IOException
+	 */
+	private static void copyOriginApk2WorkAndRename() throws IOException {
+		System.out.println("Step three:Copy origin apk to work dir and rename");
+		String tempApkPath=WORK_PATH+File.separator+"tempApk.apk";
+		tempApkFile = new File(tempApkPath);
+		if (!tempApkFile.exists()) {
+			tempApkFile.getParentFile().mkdirs();
+		}else{
+			FileUtil.delete(tempApkPath);
+		}
+		tempApkFile.createNewFile();
+		
+		FileUtil.copyFile(originApkFile, tempApkFile);
+		System.out.println("Step three:Copy origin apk to work dir and rename success!!");
+		System.out.println("----------------------------");
+		System.out.println(LINE_SEPARATOR);
+	}
+	
 	/**
 	 * 反编译apk到Bak目录
 	 * @param apktoolVersion
@@ -128,16 +159,16 @@ public class ReBulidApkTool {
 	 * @throws Exception
 	 */
 	private static void decodeApk2Bak( ) throws Exception {
-		System.out.println("Step three:Decompile game package to work/bak directory");
+		System.out.println("Step four:Decompile game package to work/bak directory");
 
 		FileUtil.delete(BAK_PATH);
 		File bakFile = new File(BAK_PATH);
 		bakFile.mkdirs();
 
-		String decodeApkCompileCommand = String.format("java -jar -Xms512m -Xmx512m apktool.jar d -f -o %s %s", new String[] {BAK_PATH, originApkFile.getAbsolutePath()});
+		String decodeApkCompileCommand = String.format("java -jar -Xms512m -Xmx512m apktool.jar d -f -o %s %s", new String[] {BAK_PATH, tempApkFile.getAbsolutePath()});
 		System.out.println("decodeApkCompileCommand:" + decodeApkCompileCommand);
 		CommandUtil.exeCmd(decodeApkCompileCommand, new File(TOOLS_PATH));
-		System.out.println("Step three:Decompile game package to work/bak directory success!!");
+		System.out.println("Step four:Decompile game package to work/bak directory success!!");
 		System.out.println("----------------------------");
 		System.out.println(LINE_SEPARATOR);
 	}
@@ -147,12 +178,12 @@ public class ReBulidApkTool {
 	 * @throws Exception
 	 */
 	private static void copyBak2Temp() throws Exception {
-		System.out.println("Step four:Copy work/bak directory to work/temp directory");
+		System.out.println("Step five:Copy work/bak directory to work/temp directory");
 		FileUtil.delete(TEMP_PATH);
 		File tempFile = new File(TEMP_PATH);
 		tempFile.mkdirs();
 		FileUtil.copyDirectiory(BAK_PATH, TEMP_PATH);
-		System.out.println("Step four:Copy work/bak directory to work/temp directory success!!");
+		System.out.println("Step five:Copy work/bak directory to work/temp directory success!!");
 		System.out.println("----------------------------");
 		System.out.println(LINE_SEPARATOR);
 	}
@@ -163,7 +194,7 @@ public class ReBulidApkTool {
 	 * @throws IOException
 	 */
 	private static void modifyTheManifest() throws DocumentException, IOException{
-		System.out.println("Step five:Modify the AndroidManifest.xml");
+		System.out.println("Step fix:Modify the AndroidManifest.xml");
 		OutputFormat outputFormat=new OutputFormat("",true,"UTF-8");
 		String manifestPath=TEMP_PATH+File.separator+"AndroidManifest.xml";
 		Document document = new SAXReader().read(new File(manifestPath));
@@ -223,11 +254,13 @@ public class ReBulidApkTool {
 			mainActivityIntentFilter.remove(mainAction);
 			mainActivityIntentFilter.remove(mainLauncher);
 		}
-//		application.remove(mainActivity);//移除原来的主Activity
+//		mainActivity.elements().
+		
+		application.remove(mainActivity);//移除原来的主Activity
 		
 //		动态创建UBGameWrapActivity节点
 		Element ubGameWrapActivity=DocumentHelper.createElement("activity");
-		ubGameWrapActivity.addAttribute("android:name","com.umbrella.plugin.uniplug.UBGameWrapActivity");
+		ubGameWrapActivity.addAttribute("android:name","com.umbrella.plugin.storebridge.UmbrellaActivity");
 		ubGameWrapActivity.addAttribute("android:configChanges", "keyboardHidden|orientation|screenSize");
 		
 		Element intentFilter = DocumentHelper.createElement("intent-filter");
@@ -242,7 +275,7 @@ public class ReBulidApkTool {
 		xmlWrite.write(document);
 		xmlWrite.flush();
 		xmlWrite.close();
-		System.out.println("Step five:Modify the AndroidManifest.xml success!!");
+		System.out.println("Step fix:Modify the AndroidManifest.xml success!!");
 		System.out.println("----------------------------");
 		System.out.println(LINE_SEPARATOR);
 	}
@@ -254,7 +287,7 @@ public class ReBulidApkTool {
 	private static void generateUnsignedApk( ) throws Exception {
 //		回编成apk的过程
 //		输出路径
-		System.out.println("Step fix:Generate unsigned apk");
+		System.out.println("Step seven:Generate unsigned apk");
 		
 		String generateUnsignedApkCommand=String.format("java -jar %s b -r -o %s %s ", new String[]{"apktool.jar",unSignApkPath,TEMP_PATH});
 		System.out.println("generateUnsignedApkCommand:"+generateUnsignedApkCommand);
@@ -263,7 +296,7 @@ public class ReBulidApkTool {
 		if (!unSignApkFile.exists()) {
 			throw new RuntimeException("error----->Generate unsigned apk fail!!");
 		}else{
-			System.out.println("Step fix:Generate unsigned apk success!!");
+			System.out.println("Step seven:Generate unsigned apk success!!");
 			System.out.println("----------------------------");
 			System.out.println(LINE_SEPARATOR);
 		}
@@ -275,7 +308,7 @@ public class ReBulidApkTool {
 	 * @throws Exception
 	 */
 	private static String generateSignedApk( ) throws Exception {
-		System.out.println("Step seven:Generate signed apk");
+		System.out.println("Step eight:Generate signed apk");
 //		给unsigned.apk签名
 		String keystorePath=BASE_PATH+File.separator+"keystore"+File.separator+"ubsdk.keystore";
 		String keystoreConfigPath=BASE_PATH+File.separator+"keystore"+File.separator+"config.xml";
@@ -294,7 +327,7 @@ public class ReBulidApkTool {
 		if (!signedApkFile.exists()) {
 			throw new RuntimeException("error----->Generate signed apk fail!!");
 		}else{
-			System.out.println("Step seven:Generate signed apk success!!");
+			System.out.println("Step eight:Generate signed apk success!!");
 			System.out.println("----------------------------");
 			System.out.println(LINE_SEPARATOR);
 		}
@@ -306,7 +339,7 @@ public class ReBulidApkTool {
 	 * @throws Exception
 	 */
 	private static void zipalignSignedApk( ) throws Exception {
-		System.out.println("Step eight:Optimize signature apk");
+		System.out.println("Step nine:Optimize signature apk");
 //		对已生成的签名包进行优化
 //		最终的生成渠道包路径和命令
 		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm",Locale.getDefault());
@@ -330,7 +363,7 @@ public class ReBulidApkTool {
 		if (!finalChannelApk.exists()) {
 			throw new RuntimeException("error----->Optimize signature apk fail!!");
 		}else{
-			System.out.println("Step eight:Optimize signture apk success!!");
+			System.out.println("Step nine:Optimize signture apk success!!");
 			System.out.println("----------------------------");
 			System.out.println(LINE_SEPARATOR);
 		}
